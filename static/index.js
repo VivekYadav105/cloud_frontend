@@ -40,9 +40,8 @@ const endpoints = {
     },
     "Upload":{
         aboutLink:"https://www.cirt.net/Nikto2",
-        apiEndPoint:"/uploadfile",
+        apiEndPoint:api+"/getUploadUrl",
         value:"Upload file",
-        type:'form'
     },
 }
 
@@ -93,6 +92,7 @@ const changeTestName = (e)=>{
     inputField.classList.remove("pt-2")
     if(test=="Upload"){
         inputField.setAttribute('type','file')
+        
         inputField.style.backgroundColor = "white"
         inputField.classList.add("pt-2")
     }
@@ -115,6 +115,29 @@ function closePopUp(){
 function renderHtml(data){
     popUp.innerText += JSON.stringify(data)
 }
+
+function uploadFile(file,req){
+    const formData = new FormData();
+    formData.append('key', file.name);
+    formData.append("x-amz-algorithm",req.fields["x-amz-algorithm"])
+    formData.append("x-amz-credential",req.fields["x-amz-credential"])
+    formData.append("x-amz-date",req.fields["x-amz-date"])
+    formData.append("policy",req.fields["policy"])
+    formData.append("x-amz-signature",req.fields["x-amz-signature"])
+    formData.append("file",file) 
+    
+    fetch(req.url,{
+        method:"POST",
+        mode:"cors",
+        headers: {
+            "Content-Type":"multipart/form-data"
+        },
+        body:formData}).then((res)=>res.json()).then((data)=>{
+            console.log(data)
+        })
+
+}
+
 
 async function submitForm(e){
     e.preventDefault();
@@ -139,12 +162,20 @@ async function submitForm(e){
     }
 
     if(test=="Upload"){
-        const formData = new FormData();
-        formData.append('myFile', input.files[0]);
-        const res = await fetch('/uploadtoS3')
-
+        console.log("inside")
+        console.log(e.target[0].files[0].name)
+        const sendFile = await fetch(endpoints[test].apiEndPoint,{
+            // mode:'cors',
+            headers:{
+                "content-type":"application/json"
+            },
+            method:"post",
+            body: JSON.stringify({"filename":e.target[0].files[0].name})
+            
+        }).then((res)=>res.json()).then(data=>uploadFile(e.target[0].files[0],data))
+        return         
     }
-    console.log(test)
+    console.log("outside")
     if(test=="Nikto" || test=="Nmap" || test=="Scan"){
         if(test!="Scan")  url = parseUrl(url)
         const socket = new WebSocket(endpoints[test].apiEndPoint)
