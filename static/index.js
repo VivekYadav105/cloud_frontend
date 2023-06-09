@@ -8,8 +8,8 @@ const inputField = document.forms[0][0]
 const buttonWrapper = document.getElementById("button-wrapper")
 let test = "Nikto"
 
-var api = "http://127.0.0.1:8000"
-var apiSocket = "ws://127.0.0.1:8000"
+var api = "http://192.168.59.128:8000"
+var apiSocket = "ws://192.168.59.128:8000"
 
 
 const endpoints = {
@@ -117,25 +117,69 @@ function renderHtml(data){
 }
 
 function uploadFile(file,req){
-    const formData = new FormData();
-    formData.append('key', file.name);
-    formData.append("x-amz-algorithm",req.fields["x-amz-algorithm"])
-    formData.append("x-amz-credential",req.fields["x-amz-credential"])
-    formData.append("x-amz-date",req.fields["x-amz-date"])
-    formData.append("policy",req.fields["policy"])
-    formData.append("x-amz-signature",req.fields["x-amz-signature"])
-    formData.append("file",file) 
+    // const formData = new FormData();
+    // formData.append('key', req.fields["key"]);
+    // formData.append("x-amz-algorithm",req.fields["x-amz-algorithm"])
+    // formData.append("x-amz-credential",req.fields["x-amz-credential"])
+    // formData.append("x-amz-date",req.fields["x-amz-date"])
+    // formData.append("policy",req.fields["policy"])
+    // formData.append("x-amz-signature",req.fields["x-amz-signature"])
+    // formData.append("file",file) 
     
-    fetch(req.url,{
-        method:"POST",
-        mode:"cors",
-        headers: {
-            "Content-Type":"multipart/form-data"
-        },
-        body:formData}).then((res)=>res.json()).then((data)=>{
-            console.log(data)
-        })
+    // fetch('https://web-vul-project.s3.amazonaws.com',{
+    //     method:"POST",
+    //     mode:"cors",
+    //     headers: {
+    //         "Content-Type":"multipart/form-data"
+    //     },
+    //     body:formData}).then((res)=>res.json()).then((data)=>{
+    //         console.log(data)
+    //     })
 
+
+
+
+        const fileInput = document.getElementById('myfile');
+        const selectedFile = fileInput.files[0];
+        console.log(selectedFile)
+        const formData = new FormData();
+        formData.append('key', req.fields["key"]);
+        formData.append('x-amz-algorithm', req.fields["x-amz-algorithm"]);
+        formData.append('x-amz-credential', req.fields["x-amz-credential"]);
+        formData.append('x-amz-date', req.fields["x-amz-date"]);
+        formData.append('policy', req.fields["policy"]);
+        formData.append('x-amz-signature', req.fields["x-amz-signature"]);
+        formData.append('file', selectedFile);
+
+        fetch('https://web-vul-project.s3.amazonaws.com/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('File upload response:', response);
+
+
+            const uploadedFileUrl = 'https://web-vul-project.s3.amazonaws.com/' + req.fields["key"]
+            console.log(uploadedFileUrl);
+
+
+            popUp.classList.remove("hidden")
+            popUpHeading.innerText = test 
+            console.log("hello")
+            const socket = new WebSocket(endpoints["Scan"].apiEndPoint)
+            socket.onopen = (e)=>{
+                socket.send(uploadedFileUrl)
+            }
+            socket.onmessage = (e)=>{
+                popUpText.innerText += JSON.stringify(e.data)
+                popUpText.innerHTML += "<br/>"
+            }
+            return 
+            
+        })
+        .catch(error => {
+            console.error('File upload error:', error);
+        });
 }
 
 
@@ -145,10 +189,11 @@ async function submitForm(e){
     popUpHeading.innerText = ""
     let url = e.target[0].value;
 
-    popUp.classList.remove("hidden")
-    popUpHeading.innerText = test 
+
 
     if(test=="Scan"){
+        popUp.classList.remove("hidden")
+        popUpHeading.innerText = test 
         console.log("hello")
         const socket = new WebSocket(endpoints[test].apiEndPoint)
         socket.onopen = (e)=>{
@@ -178,6 +223,8 @@ async function submitForm(e){
     console.log("outside")
     if(test=="Nikto" || test=="Nmap" || test=="Scan"){
         if(test!="Scan")  url = parseUrl(url)
+        popUp.classList.remove("hidden")
+        popUpHeading.innerText = test 
         const socket = new WebSocket(endpoints[test].apiEndPoint)
         socket.onopen = (e)=>{
             socket.send(url)
@@ -213,6 +260,8 @@ async function submitForm(e){
         console.log(data)
         popUpText.innerText = data
     }
+    popUp.classList.remove("hidden")
+    popUpHeading.innerText = test 
 }
 
 init()
